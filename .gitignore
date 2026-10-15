@@ -7,6 +7,9 @@
 .idea/
 *.user
 *.suo
+**/*.tar
+**/*.zip
+**/*.tar.gz
 *.userosscache
 *.sln.docstates
 .DS_Store
