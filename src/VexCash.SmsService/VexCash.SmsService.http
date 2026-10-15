@@ -1,0 +1,73 @@
+@HostAddress = http://localhost:5066
+
+### 1. Get all customers
+GET {{HostAddress}}/api/customers
+Accept: application/json
+
+### 2. Get overdue customers only
+GET {{HostAddress}}/api/customers?overdueOnly=true
+Accept: application/json
+
+### 3. Get customer by ID
+GET {{HostAddress}}/api/customers/1
+Accept: application/json
+
+### 4. Create a new customer
+POST {{HostAddress}}/api/customers
+Content-Type: application/json
+
+{
+  "phonenr": "+4917612345678",
+  "name": "Sabine Zimmermann",
+  "creditnumber": "CR-2026-5555",
+  "amount": 420.00,
+  "dueDate": "2026-11-01T00:00:00Z"
+}
+
+### 5. Get all message templates
+GET {{HostAddress}}/api/templates
+Accept: application/json
+
+### 6. Get template by type (Erinnerung, Mahnung, Kuendigung)
+GET {{HostAddress}}/api/templates/Erinnerung
+Accept: application/json
+
+### 7. Update Mahnung template
+PUT {{HostAddress}}/api/templates/Mahnung
+Content-Type: application/json
+
+{
+  "title": "Dringende Mahnung",
+  "content": "Kredit {Creditnumber}\n\nSehr geehrte/r {Name},\nIhre Zahlung von {amount} war am {dueDate} fällig. Bitte überweisen Sie sofort!"
+}
+
+### 8. Preview SMS for customer 1 with Erinnerung template
+POST {{HostAddress}}/api/sms/preview
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "templateType": "Erinnerung"
+}
+
+### 9. Send single SMS to customer 1
+POST {{HostAddress}}/api/sms/send
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "templateType": "Erinnerung"
+}
+
+### 10. Bulk send Mahnung to all overdue customers
+POST {{HostAddress}}/api/sms/send-bulk
+Content-Type: application/json
+
+{
+  "templateType": "Mahnung",
+  "onlyOverdue": true
+}
+
+### 11. View SMS dispatch history
+GET {{HostAddress}}/api/sms/history
+Accept: application/json

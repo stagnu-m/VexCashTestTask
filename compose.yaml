@@ -1,0 +1,23 @@
+﻿services:
+  # Define the test service first
+  vexcash.smsservice.tests:
+    image: vexcash.smsservice.tests
+    container_name: vexcash_tests # Renames the test container
+    build:
+      context: .
+      dockerfile: tests/VexCash.SmsService.Tests/Dockerfile
+
+  # Define the API service
+  vexcash.smsservice:
+    image: vexcash.smsservice
+    container_name: vexcash_api # Renames your main API container
+    build:
+      context: .
+      dockerfile: src/VexCash.SmsService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "8080:8080"
+    depends_on:
+      vexcash.smsservice.tests:
+        condition: service_completed_successfully # Blocks the API until tests pass
