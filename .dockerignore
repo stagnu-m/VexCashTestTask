@@ -8,7 +8,7 @@
 **/*.suo
 **/*.tar
 **/*.zip
+**/*.tar.gz
 .DS_Store
 global.json
 README.md
-send_sms.md
