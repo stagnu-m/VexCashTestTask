@@ -47,11 +47,12 @@ A modern REST API microservice built with C# / .NET 10 for automated loan notifi
 
 ```
 VexCashTestTask/
-├── Dockerfile                              # Multi-stage Docker build & runtime
+├── compose.yaml                            # Docker Compose orchestration (test runner + API)
 ├── .dockerignore
 ├── VexCash.SmsService.sln
 ├── src/
 │   └── VexCash.SmsService/
+│       ├── Dockerfile                      # Multi-stage production Dockerfile for the API
 │       ├── Controllers/
 │       │   ├── CustomersController.cs      # Customer CRUD via ICustomerRepository
 │       │   ├── TemplatesController.cs      # Template management via ITemplateRepository
@@ -82,11 +83,14 @@ VexCashTestTask/
 │       ├── Options/
 │       │   └── MessageBirdOptions.cs
 │       ├── appsettings.json
+│       ├── appsettings.Development.json
 │       ├── Program.cs
 │       ├── Startup.cs
 │       └── VexCash.SmsService.http         # Ready-to-run HTTP test requests
 └── tests/
     └── VexCash.SmsService.Tests/
+        ├── Dockerfile                      # Automated test runner Dockerfile
+        ├── RepositoryTests.cs              # Unit tests for repository layer
         ├── TemplateRendererTests.cs        # Tests for placeholder parsing & formatting
         ├── SmsDispatchServiceTests.cs      # Tests for single & bulk dispatch rules
         ├── MessageBirdClientTests.cs       # Tests for API client & payload validation
@@ -97,13 +101,32 @@ VexCashTestTask/
 
 ## Running with Docker (Recommended for Evaluators)
 
-The application includes a production-ready, multi-stage [`Dockerfile`](file:///Users/miha/Projects/VexCashTestTask/Dockerfile) that compiles the code, executes all unit tests, and packages only the compiled Release binaries into a lightweight ASP.NET 10 runtime container.
+The solution provides modular Dockerfiles for both the API service ([`src/VexCash.SmsService/Dockerfile`](file:///Users/miha/Projects/VexCashTestTask/src/VexCash.SmsService/Dockerfile)) and automated test suite ([`tests/VexCash.SmsService.Tests/Dockerfile`](file:///Users/miha/Projects/VexCashTestTask/tests/VexCash.SmsService.Tests/Dockerfile)), orchestrated via [`compose.yaml`](file:///Users/miha/Projects/VexCashTestTask/compose.yaml).
 
-### Option A: Build and Run from Source
+### Option A: Using Docker Compose (All-in-One: Automated Tests + API)
 
-1. **Build the Docker Image:**
+Docker Compose ensures the entire test suite passes before bringing up the API container:
+
+```bash
+docker compose up --build
+```
+
+- First, the `vexcash_tests` container builds and runs all unit & integration tests.
+- Once tests pass successfully (`condition: service_completed_successfully`), the `vexcash_api` container is automatically started on port `8080`.
+- Access Swagger UI: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+---
+
+### Option B: Build and Run via Docker CLI
+
+1. **Build the API Docker Image:**
    ```bash
-   docker build -t vexcash.smsservice .
+   docker build -f src/VexCash.SmsService/Dockerfile -t vexcash.smsservice .
    ```
 
 2. **Run the Container:**
@@ -123,21 +146,28 @@ The application includes a production-ready, multi-stage [`Dockerfile`](file:///
    - Swagger UI: [http://localhost:8080/swagger](http://localhost:8080/swagger)
    - The root URL [http://localhost:8080/](http://localhost:8080/) automatically redirects to Swagger UI.
 
-4. **Stop the Container:**
+4. *(Optional)* Run tests via Docker CLI:
+   ```bash
+   docker build -f tests/VexCash.SmsService.Tests/Dockerfile -t vexcash.smsservice.tests .
+   docker run --rm --name vexcash_tests vexcash.smsservice.tests
+   ```
+
+5. **Stop the Container:**
    ```bash
    docker stop vexcash_api && docker rm vexcash_api
    ```
 
 ---
 
-### Option B: Running from a Standalone Docker Image (`.tar` Archive)
+### Option C: Running from a Standalone Docker Image (`.tar` / `.tar.gz` Archive)
 
-If you received this project as a pre-packaged Docker archive (`vexcash.smsservice.tar`) without source code:
+If you received this project as a pre-packaged Docker archive (`vexcash_service.tar.gz` or `vexcash.smsservice.tar`) without source code:
 
 1. **Load the Image into Docker:**
    ```bash
-   docker load -i vexcash.smsservice.tar
+   docker load < vexcash_service.tar.gz
    ```
+   *(or `docker load -i vexcash.smsservice.tar`)*
 
 2. **Run the Container:**
    ```bash
@@ -146,8 +176,6 @@ If you received this project as a pre-packaged Docker archive (`vexcash.smsservi
 
 3. **Open the Service:**
    - Open your browser to [http://localhost:8080/swagger](http://localhost:8080/swagger)
-
-*(Note for developer: To create the `.tar` archive for the recruiter, run: `docker save -o vexcash.smsservice.tar vexcash.smsservice`)*
 
 ---
 
@@ -279,6 +307,7 @@ dotnet test
 
 ### Test Coverage Highlights:
 - **`TemplateRendererTests`**: Validates placeholder substitution, case-insensitivity, currency formatting (`250,00 EUR`), and date formatting (`20.10.2026`).
+- **`RepositoryTests`**: Validates EF Core In-Memory database CRUD and query operations across customer, template, and audit log repositories.
 - **`MessageBirdClientTests`**: Validates MSISDN phone normalization, payload generation, and simulation handling.
 - **`SmsDispatchServiceTests`**: Validates single dispatch, bulk overdue filtering, error handling, and audit log generation using repository mocks.
 - **`IntegrationTests`**: End-to-end API testing using `WebApplicationFactory<Startup>`, verifying HTTP endpoints, Swagger availability, and database state transitions.
